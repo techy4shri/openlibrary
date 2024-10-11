@@ -12,6 +12,7 @@ import uuid
 import eventer
 import requests
 
+from infogami import config
 from infogami.utils.view import public
 from infogami.utils import delegate
 from openlibrary.core import cache
@@ -70,6 +71,7 @@ config_http_request_timeout = None
 config_loanstatus_url = None
 config_bookreader_host = None
 config_internal_tests_api_key = None
+config_offline_mode = None
 
 
 def setup(config):
@@ -81,6 +83,7 @@ def setup(config):
     global config_ia_xauth_api_url, config_http_request_timeout, config_ia_s3_auth_url
     global config_ia_users_loan_history, config_ia_loan_api_developer_key
     global config_ia_civicrm_api, config_ia_domain
+    global config_offline_mode
 
     config_loanstatus_url = config.get('loanstatus_url')
     config_bookreader_host = config.get('bookreader_host', 'archive.org')
@@ -101,6 +104,7 @@ def setup(config):
     config_ia_civicrm_api = config.get('ia_civicrm_api')
     config_internal_tests_api_key = config.get('internal_tests_api_key')
     config_http_request_timeout = config.get('http_request_timeout')
+    config_offline_mode = config.get('offline_mode', False)
 
 
 @public
@@ -192,6 +196,9 @@ def get_cached_groundtruth_availability(ocaid):
 def get_groundtruth_availability(ocaid, s3_keys=None):
     """temporary stopgap to get ground-truth availability of books
     including 1-hour borrows"""
+    if config.get("offline_mode", False):
+        return []
+
     params = '?action=availability&identifier=' + ocaid
     url = S3_LOAN_URL % config_bookreader_host
     try:
@@ -246,6 +253,8 @@ def get_available(
     used in such things as 'Staff Picks' carousel to retrieve a list
     of unique available books.
     """
+    if config_offline_mode:
+        return {'error': 'offline_mode'}
 
     url = url or compose_ia_url(
         limit=limit,
@@ -388,15 +397,19 @@ def get_availability(
             )
         response = cast(
             AvailabilityServiceResponse,
-            requests.get(
-                config_ia_availability_api_v2_url,
-                params={
-                    id_type: ','.join(ids_to_fetch),
-                    "scope": "printdisabled",
-                },
-                headers=headers,
-                timeout=10,
-            ).json(),
+            (
+                requests.get(
+                    config_ia_availability_api_v2_url,
+                    params={
+                        id_type: ','.join(ids_to_fetch),
+                        "scope": "printdisabled",
+                    },
+                    headers=headers,
+                    timeout=10,
+                ).json()
+                if not config_offline_mode
+                else {"responses": {}}
+            ),
         )
         uncached_values = {
             _id: update_availability_schema_to_v2(
