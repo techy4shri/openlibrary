@@ -17,6 +17,3 @@ echo "deb [signed-by=/usr/share/keyrings/nginx-keyring.asc] http://nginx.org/pac
 # Install nginx and the NJS module
 apt-get update
 apt-get install -y --no-install-recommends nginx nginx-module-njs letsencrypt
-
-# Remove the stock nginx config file
-rm /etc/nginx/sites-enabled/default
