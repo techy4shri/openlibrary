@@ -40,14 +40,20 @@ RUN ./install_nodejs.sh && rm ./install_nodejs.sh
 
 # Install nginx
 USER root
-RUN apt-get update && apt-get install -y --no-install-recommends nginx curl letsencrypt \
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl  \
     # log rotation service for ol-nginx
     logrotate \
     # rsync service for pulling monthly sitemaps from ol-home0 to ol-www0
     rsync \
-    # NJS for IP anonymization
-    libnginx-mod-http-js \
-    # Remove the stock nginx config file
+ # NJS for IP anonymization
+ && curl -fsSL https://nginx.org/keys/nginx_signing.key | tee /usr/share/keyrings/nginx-keyring.asc \
+ && echo "deb [signed-by=/usr/share/keyrings/nginx-keyring.asc] http://nginx.org/packages/ubuntu $(lsb_release -cs) nginx" \
+     > /etc/apt/sources.list.d/nginx.list \
+ && apt-get update \
+ # Install nginx and the NJS module
+ && apt-get install -y --no-install-recommends nginx nginx-module-njs letsencrypt \
+ # Remove the stock nginx config file
  && rm /etc/nginx/sites-enabled/default
 
 RUN mkdir -p /var/log/openlibrary /var/lib/openlibrary && chown openlibrary:openlibrary /var/log/openlibrary /var/lib/openlibrary \
