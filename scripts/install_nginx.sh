@@ -6,7 +6,8 @@ apt-get update
 # rsync service for pulling monthly sitemaps from ol-home0 to ol-www0
 apt-get install -y --no-install-recommends curl \
     logrotate \
-    rsync
+    rsync \
+    lsb-release
 
 # Add the NGINX signing key + Repo
 curl -fsSL https://nginx.org/keys/nginx_signing.key | tee /usr/share/keyrings/nginx-keyring.asc
